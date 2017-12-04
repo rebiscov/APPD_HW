@@ -109,7 +109,7 @@ void computeMST(
       count++;
 
       for (i = 0; i < N; i++){
-	if (!vertice_set[i] && D[i].w > adj[last_i*N + i]){
+	if (!vertice_set[i] && adj[last_i*N + i] > 0 && (D[i].w > adj[last_i*N + i] || D[i].w == 0)){
 	  D[i].w = adj[last_i*N + i];
 	  D[i].u = last_i;
 	}
