@@ -52,20 +52,29 @@ struct w_edge{
 };
 
 int cmp(const void *e1, const void *e2){
-  return (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w;
+  if( (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w != 0)
+    return (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w;
+  else if ( (*(struct w_edge*)e1).u - (*(struct w_edge*)e2).u != 0)
+    return (*(struct w_edge*)e1).u - (*(struct w_edge*)e2).u;
+  else
+    return (*(struct w_edge*)e1).v - (*(struct w_edge*)e2).v;
 }
 
 int find(int x, struct element *P){ /* We find, and compress the structure */
-  int y;
-  
-  if (P[x].x == x)
-    return x;
-  else{
-    y = find(P[x].x, P);
+  int y, z;
+
+  y = x;
+
+  while (P[y].x != y)
+    y = P[y].x;
+
+  while (x != P[x].x){
+    z = P[x].x;
     P[x].x = y;
-    
-    return y;
+    x = z;
   }
+
+  return y;
 }
 
 void unify(int a, int b, struct element *P){ /* We unify (a & b must be representants of their partitions) */
@@ -179,8 +188,8 @@ void computeMST(
     for (i = 0; i < N; i++)
       for (j = 0; j <= i; j++)
 	if (adj[i*N + j] > 0){
-	  edges[count].u = i;
-	  edges[count].v = j;
+	  edges[count].u = j;
+	  edges[count].v = i;
 	  edges[count++].w = adj[i*N + j];
 	}
 
