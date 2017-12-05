@@ -5,6 +5,8 @@
  * @param algoName the name of the algorithm to be executed
  */
 
+// structures and functions for the Prim algorithm
+
 struct edge{
   int u;
   int v;
@@ -34,6 +36,49 @@ int lexico(int i, int j, int k, int l){ // return 1 if the couple (i, j) < (k, l
     return 1;
 
   return 0;
+}
+
+// structures and functions for the Kruskal algorithm
+
+struct element{ /* This structure will be convinient for the union find */
+  int x;
+  int nb;
+};
+
+struct w_edge{
+  int u; /* u and v are vertices, w is the weight of the edge */
+  int v;
+  int w;
+};
+
+int cmp(const void *e1, const void *e2){
+  return (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w;
+}
+
+int find(int x, struct element *P){ /* We find, and compress the structure */
+  int y;
+  
+  if (P[x].x == x)
+    return x;
+  else{
+    y = find(P[x].x, P);
+    P[x].x = y;
+    
+    return y;
+  }
+}
+
+void unify(int a, int b, struct element *P){ /* We unify (a & b must be representants of their partitions) */
+  if (a == b)
+    printf("x and y are already in the same partition\n");
+  else if (P[a].nb > P[b].nb){
+    P[b].x = a;
+    P[a].nb += P[b].nb;
+  }
+  else{
+    P[a].x = b;
+    P[b].nb += P[a].nb;
+  }
 }
 
 
@@ -125,6 +170,43 @@ void computeMST(
       }
     }
     // BEGIN IMPLEMENTATION HERE
+
+    struct w_edge edges[M];
+    struct edge tree[N-1];    
+    struct element partition[N];
+    int i, j, count = 0;
+
+    for (i = 0; i < N; i++)
+      for (j = 0; j <= i; j++)
+	if (adj[i*N + j] > 0){
+	  edges[count].u = i;
+	  edges[count].v = j;
+	  edges[count++].w = adj[i*N + j];
+	}
+
+    qsort(edges, M, sizeof(struct w_edge), cmp);
+
+    for (i = 0; i < N; i++){
+      partition[i].x = i;
+      partition[i].nb = 1;
+    }
+
+    count = 0;
+    i = 0;
+
+    while (count < N-1){
+      int a = find(edges[i].u, partition), b = find(edges[i].v, partition);
+      if (a != b && edges[i].u != edges[i].v){
+	tree[count].u = edges[i].u;
+	tree[count].v = edges[i].v;
+	unify(a, b, partition);
+	count++;
+      }
+      i++;
+    }
+
+    for (i = 0; i < N-1; i++)
+      printf("%d %d\n", tree[i].u, tree[i].v);
 
   } else if (strcmp(algoName, "prim-par") == 0) { // Parallel Prim's algorithm
     // BEGIN IMPLEMENTATION HERE
