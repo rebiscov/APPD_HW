@@ -221,8 +221,8 @@ void computeMST(
     // BEGIN IMPLEMENTATION HERE
 
     int vertice_set[N];
-    int d_size = procRank != numProcs - 1 ? ceil(N/numProcs) : N - ceil(N/numProcs)*(numProcs-1);
-    int offset = procRank * ceil(N / numProcs);
+    int d_size = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1);
+    int offset = procRank * ceil((float)N / numProcs);
     struct in_tree D[d_size];
     struct edge tree[N-1];
     int i;
@@ -258,27 +258,23 @@ void computeMST(
 	  last_i = i + offset;	  
 	}
 	else if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w == D[i].w) {
-	  if (lexico(D[i].u, i, candidate.u, last_i)){
+	  if (lexico(D[i].u, i + offset, candidate.u, last_i)){
 	    candidate.w = D[i].w;
 	    candidate.u = D[i].u;
-	    last_i = i + offset;	      
+ 	    last_i = i + offset;	      
 	  }
 	}
       }
-      if (candidate.w == 0)
-	candidate.w = 90000;
-      
       send[0] = last_i;
       send[1] = candidate.u;
       send[2] = candidate.w;
-      
-      MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
+      MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD);
 
       if (procRank == 0){
 	int u = recv[0], v = recv[1], w = recv[2];
 	for (int j = 1; j < numProcs; j++)
-	  if (recv[3*j + 2] < w || (recv[3*j + 2] == w && lexico(recv[3*j], recv[3*j + 1], u, v))){
+	  if (w == 0 || (recv[3*j+2] != 0 && recv[3*j + 2] < w || (recv[3*j + 2] == w && lexico(recv[3*j], recv[3*j + 1], u, v)))){
 	    u = recv[3*j];
 	    v = recv[3*j + 1];
 	    w = recv[3*j + 2];
@@ -288,7 +284,8 @@ void computeMST(
 	send[2] = w;
       }
 
-      MPI_Bcast(send, 3, MPI_INT, 0, MPI_COMM_WORLD);
+
+      MPI_Bcast(&send[0], 3, MPI_INT, 0, MPI_COMM_WORLD);
 
       if (send[0] > send[1])
 	swap(&send[0], &send[1]);
@@ -296,8 +293,6 @@ void computeMST(
       tree[count].v = send[1];
       
       int u;
-      vertice_set[send[0]] = 1;
-      vertice_set[send[1]] = 1;      
       if (vertice_set[send[0]] == 0){
 	u = send[0];
 	vertice_set[u] = 1;
@@ -306,20 +301,20 @@ void computeMST(
 	u = send[1];
 	vertice_set[u] = 1;	
       }
-
       
       for (i = 0; i < d_size; i++){
-	if (D[i].w > adj[i*N + u]){
+	if (D[i].w > adj[i*N + u] || D[i].w == 0){
 	  D[i].u = u;
 	  D[i].w = adj[i*N + u];
 	}
       }
     }
 
-    for (int count = 0; count < numProcs - 1; count++)
-      printf("%d %d\n", tree[count].u, tree[count].v);
-    
-    
+    if (procRank == 0){
+      for (int count = 0; count < N - 1; count++)
+	printf("%d %d\n", tree[count].u, tree[count].v);
+    }
+
 
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
