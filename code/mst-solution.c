@@ -303,7 +303,7 @@ void computeMST(
       }
       
       for (i = 0; i < d_size; i++){
-	if (D[i].w > adj[i*N + u] || D[i].w == 0){
+	if ((D[i].w > adj[i*N + u] && adj[i*N + u] > 0) || D[i].w == 0){
 	  D[i].u = u;
 	  D[i].w = adj[i*N + u];
 	}
