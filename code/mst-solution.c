@@ -5,18 +5,6 @@
  * @param algoName the name of the algorithm to be executed
  */
 
-// structures and functions for the Prim algorithm
-
-struct edge{
-  int u;
-  int v;
-};
-
-struct neighbor_in_tree{ /* Represent the closest neighbour u in the tree, w being the "distance" to the tree */
-  int u;
-  int w;
-};
-
 void swap(int *a, int *b){
   int temp;
   temp = *a;
@@ -24,7 +12,19 @@ void swap(int *a, int *b){
   *b = temp;
 }
 
-int lexico(int i, int j, int k, int l){ // return 1 if the couple (i, j) < (k, l) for the lexico order
+struct edge{
+  int u;
+  int v;
+};
+
+// structures and functions for the Prim algorithm
+
+struct neighbor_in_tree{ /* Represent the closest neighbour u in the tree, w being the "distance" to the tree */
+  int u;
+  int w;
+};
+
+int lexico(int i, int j, int k, int l){ // return 1 if the couple (i, j) < (k, l) for the lexicographic order
   int temp;
   if (i > j)
     swap(&i, &j);
@@ -41,7 +41,7 @@ int lexico(int i, int j, int k, int l){ // return 1 if the couple (i, j) < (k, l
 // structures and functions for the Kruskal algorithm
 
 struct element{ /* This structure will be convinient for the union find */
-  int x;
+  int x; /* the "parent" of the element, a represent of a class has himself as his parent */
   int nb;
 };
 
@@ -313,6 +313,8 @@ void computeMST(
 
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
+
+    
 
   } else { // Invalid algorithm name
     if (procRank == 0) {
