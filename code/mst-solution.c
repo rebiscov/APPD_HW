@@ -54,8 +54,10 @@ struct w_edge{
 int cmp(const void *e1, const void *e2){
   if( (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w != 0)
     return (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w;
+  
   else if ( (*(struct w_edge*)e1).u - (*(struct w_edge*)e2).u != 0)
     return (*(struct w_edge*)e1).u - (*(struct w_edge*)e2).u;
+  
   else
     return (*(struct w_edge*)e1).v - (*(struct w_edge*)e2).v;
 }
