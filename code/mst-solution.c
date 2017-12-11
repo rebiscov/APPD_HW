@@ -12,7 +12,7 @@ struct edge{
   int v;
 };
 
-struct in_tree{
+struct in_tree{ /* Represent the closest neighbour u in the tree, w being the "distance" to the tree */
   int u;
   int w;
 };
@@ -133,15 +133,10 @@ void computeMST(
       int last_i;
       candidate.w = 0;
       for (i = 0; i < N; i++){
-	if (!(vertice_set[i]) && D[i].w > 0 && candidate.w == 0){
+	if (!(vertice_set[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
 	  last_i = i;
-	}
-	else if (!(vertice_set[i]) && D[i].w > 0 && candidate.w > D[i].w) {
-	  candidate.w = D[i].w;
-	  candidate.u = D[i].u;
-	  last_i = i;	  
 	}
 	else if (!(vertice_set[i]) && D[i].w > 0 && candidate.w == D[i].w) {
 	  if (lexico(D[i].u, i, candidate.u, last_i)){
@@ -220,8 +215,8 @@ void computeMST(
   } else if (strcmp(algoName, "prim-par") == 0) { // Parallel Prim's algorithm
     // BEGIN IMPLEMENTATION HERE
 
-    int vertice_set[N];
-    int d_size = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1);
+    int vertice_set[N]; /* boolean array to keep track of the vertices in the array */
+    int d_size = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
     int offset = procRank * ceil((float)N / numProcs);
     struct in_tree D[d_size];
     struct edge tree[N-1];
@@ -232,8 +227,8 @@ void computeMST(
     memset(vertice_set, 0, sizeof(int)*N);
     vertice_set[0] = 1;
 
-    for (i = 0; i < d_size; i++)
-      if (adj[i*N] > 0){
+    for (i = 0; i < d_size; i++) /* I initialize the D vector, in addition of the minimun distance, I add the vertice for which this distance is tight */
+      if (adj[i*N + 0] > 0){
 	D[i].w = adj[i*N];
 	D[i].u = 0;
       }
@@ -243,19 +238,14 @@ void computeMST(
       }
 
     for (int count = 0; count < N - 1; count++){
-      struct in_tree candidate;
+      struct in_tree candidate; /* I store the candidate for the minimum distance */
       int last_i;
       candidate.w = 0;
       for (i = 0; i < d_size; i++){
-	if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w == 0){
+	if (!(vertice_set[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
 	  last_i = i + offset;
-	}
-	else if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w > D[i].w) {
-	  candidate.w = D[i].w;
-	  candidate.u = D[i].u;
-	  last_i = i + offset;	  
 	}
 	else if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w == D[i].w) {
 	  if (lexico(D[i].u, i + offset, candidate.u, last_i)){
@@ -269,9 +259,9 @@ void computeMST(
       send[1] = candidate.u;
       send[2] = candidate.w;
 
-      MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD); /* Every processor sends the edge it chose to processor 0*/
 
-      if (procRank == 0){
+      if (procRank == 0){ /* Processor 0 take the minimum */
 	int u = recv[0], v = recv[1], w = recv[2];
 	for (int j = 1; j < numProcs; j++)
 	  if (w == 0 || (recv[3*j+2] != 0 && recv[3*j + 2] < w || (recv[3*j + 2] == w && lexico(recv[3*j], recv[3*j + 1], u, v)))){
@@ -285,9 +275,9 @@ void computeMST(
       }
 
 
-      MPI_Bcast(&send[0], 3, MPI_INT, 0, MPI_COMM_WORLD);
+      MPI_Bcast(&send[0], 3, MPI_INT, 0, MPI_COMM_WORLD); /* Processor 0 broadcast the result */
 
-      if (send[0] > send[1])
+      if (send[0] > send[1]) /* We add the chosen edge in the tree*/
 	swap(&send[0], &send[1]);
       tree[count].u = send[0];
       tree[count].v = send[1];
@@ -302,7 +292,7 @@ void computeMST(
 	vertice_set[u] = 1;	
       }
       
-      for (i = 0; i < d_size; i++){
+      for (i = 0; i < d_size; i++){ /* Each processor updates its array D */
 	if ((D[i].w > adj[i*N + u] && adj[i*N + u] > 0) || D[i].w == 0){
 	  D[i].u = u;
 	  D[i].w = adj[i*N + u];
@@ -310,7 +300,7 @@ void computeMST(
       }
     }
 
-    if (procRank == 0){
+    if (procRank == 0){ /* Processor 0 displays the result */
       for (int count = 0; count < N - 1; count++)
 	printf("%d %d\n", tree[count].u, tree[count].v);
     }
