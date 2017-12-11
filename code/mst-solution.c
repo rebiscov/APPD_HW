@@ -12,7 +12,7 @@ struct edge{
   int v;
 };
 
-struct in_tree{ /* Represent the closest neighbour u in the tree, w being the "distance" to the tree */
+struct neighbor_in_tree{ /* Represent the closest neighbour u in the tree, w being the "distance" to the tree */
   int u;
   int w;
 };
@@ -113,7 +113,7 @@ void computeMST(
     int i, j;
     int vertice_set[N];
     struct edge tree[N-1];
-    struct in_tree D[N];
+    struct neighbor_in_tree D[N];
     int count = 1; // For now we suppose there is only the vertice 0 in the tree
 
     memset(vertice_set, 0, sizeof(int)*N);
@@ -129,7 +129,7 @@ void computeMST(
     }
 
     while (count < N){
-      struct in_tree candidate;
+      struct neighbor_in_tree candidate;
       int last_i;
       candidate.w = 0;
       for (i = 0; i < N; i++){
@@ -164,7 +164,8 @@ void computeMST(
 	}
       }
     }
-    
+
+    /* END OF PRIM-SEQ */
 
   } else if (strcmp(algoName, "kruskal-seq") == 0) { // Sequential Kruskal's algorithm
     if (procRank == 0) {
@@ -175,12 +176,12 @@ void computeMST(
     }
     // BEGIN IMPLEMENTATION HERE
 
-    struct w_edge edges[M];
-    struct edge tree[N-1];    
-    struct element partition[N];
+    struct w_edge edges[M]; /* the set of edges that will be sorted */
+    struct edge tree[N-1]; /* the final tree */
+    struct element partition[N]; /* structure to keep track of the partitions, we do not want to create cycle */
     int i, j, count = 0;
 
-    for (i = 0; i < N; i++)
+    for (i = 0; i < N; i++) /* We add all the edges to the array edges */
       for (j = 0; j <= i; j++)
 	if (adj[i*N + j] > 0){
 	  edges[count].u = j;
@@ -188,22 +189,23 @@ void computeMST(
 	  edges[count++].w = adj[i*N + j];
 	}
 
-    qsort(edges, M, sizeof(struct w_edge), cmp);
+    qsort(edges, M, sizeof(struct w_edge), cmp); /* we sort them */
 
-    for (i = 0; i < N; i++){
-      partition[i].x = i;
-      partition[i].nb = 1;
+    for (i = 0; i < N; i++){ /* intialization of the union-find structure, at the beginnig, all the vertices are alone in their partitions */
+      partition[i].x = i; /* partition[i] points to the representant of i, for now it is i  */
+      partition[i].nb = 1; /* i is alone in its partition */
     }
 
     count = 0;
     i = 0;
 
-    while (count < N-1){
-      int a = find(edges[i].u, partition), b = find(edges[i].v, partition);
+    while (count < N-1){ /* while we do not have a tree... */
+      int a = find(edges[i].u, partition), b = find(edges[i].v, partition); /* check if we can add the edge (u, v) without creating a cycle */
+      
       if (a != b && edges[i].u != edges[i].v){
 	tree[count].u = edges[i].u;
 	tree[count].v = edges[i].v;
-	unify(a, b, partition);
+	unify(a, b, partition); /* put a and b in the same set */
 	count++;
       }
       i++;
@@ -212,13 +214,15 @@ void computeMST(
     for (i = 0; i < N-1; i++)
       printf("%d %d\n", tree[i].u, tree[i].v);
 
+    /* END OF KRUSKAL-SEQ */
+
   } else if (strcmp(algoName, "prim-par") == 0) { // Parallel Prim's algorithm
     // BEGIN IMPLEMENTATION HERE
 
     int vertice_set[N]; /* boolean array to keep track of the vertices in the array */
     int d_size = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
     int offset = procRank * ceil((float)N / numProcs);
-    struct in_tree D[d_size];
+    struct neighbor_in_tree D[d_size];
     struct edge tree[N-1];
     int i;
     int recv[3*numProcs];
@@ -238,8 +242,8 @@ void computeMST(
       }
 
     for (int count = 0; count < N - 1; count++){
-      struct in_tree candidate; /* I store the candidate for the minimum distance */
-      int last_i;
+      struct neighbor_in_tree candidate; /* I store the candidate for the minimum distance from a vertice to another vertice in the tree*/
+      int last_i; /* closest vertice to tree found yet */
       candidate.w = 0;
       for (i = 0; i < d_size; i++){
 	if (!(vertice_set[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
@@ -283,7 +287,7 @@ void computeMST(
       tree[count].v = send[1];
       
       int u;
-      if (vertice_set[send[0]] == 0){
+      if (vertice_set[send[0]] == 0){ /* We add the new vertex to the tree */
 	u = send[0];
 	vertice_set[u] = 1;
       }
@@ -305,6 +309,7 @@ void computeMST(
 	printf("%d %d\n", tree[count].u, tree[count].v);
     }
 
+    /* END OF PRIM-PAR */
 
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
