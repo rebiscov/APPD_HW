@@ -62,6 +62,8 @@ int cmp(const void *e1, const void *e2){
     return (*(struct w_edge*)e1).v - (*(struct w_edge*)e2).v;
 }
 
+/* Functions for the union-find structure */
+
 int find(int x, struct element *P){ /* We find, and compress the structure */
   int y, z;
 
@@ -92,6 +94,43 @@ void unify(int a, int b, struct element *P){ /* We unify (a & b must be represen
   }
 }
 
+/* Function for kruskal-par */
+
+struct array_of_tree {
+  struct w_edge *tree;
+  int size;
+};
+
+struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
+  int i, count = 0, a, b;
+  struct w_edge *tree = malloc(sizeof(struct w_edge)*m);
+  struct element partition[N];
+  struct array_of_tree *retvalue = malloc(sizeof(struct array_of_tree));
+
+  qsort(edges, m, sizeof(struct w_edge), cmp);
+
+  for (i = 0; i < N; i++){
+    partition[i].x = i;
+    partition[i].nb = 1;
+  }
+
+  for (i = 0; i < m; i++){
+    a = find(edges[i].u, partition);
+    b = find(edges[i].v, partition);
+
+    if (a != b && edges[i].u != edges[i].v){
+      tree[count].u = edges[i].u;
+      tree[count].v = edges[i].v;
+      tree[count].w = edges[i].w;      
+      unify(a, b, partition);
+      count++;
+    }
+  }
+  retvalue->tree = tree;
+  retvalue->size = count;
+
+  return retvalue;
+}
 
 void computeMST(
     int N,
