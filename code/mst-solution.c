@@ -132,6 +132,43 @@ struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
   return retvalue;
 }
 
+struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tree *F2){
+  struct element partition[N];
+  int i, j, a, b, count = 0, sumForest = F1->size + F2->size, indexF1 = 0, indexF2 = 0;
+  struct array_of_tree *tree = malloc(sizeof(struct array_of_tree)*sumForest);
+  struct w_edge *tree1 = F1->tree, *tree2 = F2->tree, candidate;
+
+  for (i = 0; i < N; i++){
+    partition[i].x = i;
+    partition[i].nb = 1;
+  }
+
+  for (i = 0; i < sumForest; i++){
+    if (cmp(&tree1[indexF1], &tree2[indexF2]) < 0)
+      candidate = tree1[indexF1++];
+    
+    else if (cmp(&tree1[indexF1], &tree2[indexF2]) > 0)
+      candidate = tree2[indexF2++];
+
+    else{
+      candidate = tree1[indexF1];
+      indexF1++;
+      indexF2++;
+    }
+    
+    a = find(candidate.u, partition);
+    b = find(candidate.v, partition);
+    if (a != b){
+      (tree->tree)[count++] = candidate;
+      unify(a, b, partition);
+    }
+  }
+
+  tree->size = count;
+
+  return tree;
+}
+
 void computeMST(
     int N,
     int M,
@@ -306,7 +343,7 @@ void computeMST(
 
       MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD); /* Every processor sends the edge it chose to processor 0*/
 
-      if (procRank == 0){ /* Processor 0 take the minimum */
+      if (procRank == 0){ /* Processor 0 takes the minimum */
 	int u = recv[0], v = recv[1], w = recv[2];
 	for (int j = 1; j < numProcs; j++)
 	  if (w == 0 || (recv[3*j+2] != 0 && recv[3*j + 2] < w || (recv[3*j + 2] == w && lexico(recv[3*j], recv[3*j + 1], u, v)))){
