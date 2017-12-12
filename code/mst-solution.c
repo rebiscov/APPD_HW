@@ -119,11 +119,8 @@ struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
     b = find(edges[i].v, partition);
 
     if (a != b && edges[i].u != edges[i].v){
-      tree[count].u = edges[i].u;
-      tree[count].v = edges[i].v;
-      tree[count].w = edges[i].w;      
+      tree[count++] = edges[i];
       unify(a, b, partition);
-      count++;
     }
   }
   retvalue->tree = tree;
