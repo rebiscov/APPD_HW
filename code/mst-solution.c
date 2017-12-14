@@ -178,6 +178,12 @@ void computeMST(
   MPI_Comm_rank(MPI_COMM_WORLD, &procRank);
   MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
 
+  MPI_Datatype MPI_WEdge; /* I define a custom type for weighted edge */
+
+  MPI_Type_contiguous(3, MPI_INT, &MPI_WEdge);
+  MPI_Type_commit(&MPI_WEdge);
+  
+
   if (strcmp(algoName, "prim-seq") == 0) { // Sequential Prim's algorithm
     if (procRank == 0) {
       if (numProcs != 1) {
