@@ -132,8 +132,10 @@ struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
 struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tree *F2){
   struct element partition[N];
   int i, j, a, b, count = 0, sumForest = F1->size + F2->size, indexF1 = 0, indexF2 = 0;
-  struct array_of_tree *tree = malloc(sizeof(struct array_of_tree)*sumForest);
+  struct array_of_tree *tree = malloc(sizeof(struct array_of_tree));
   struct w_edge *tree1 = F1->tree, *tree2 = F2->tree, candidate;
+
+  tree->tree = malloc(sumForest*sizeof(struct w_edge));
 
   for (i = 0; i < N; i++){
     partition[i].x = i;
@@ -141,10 +143,10 @@ struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tre
   }
 
   for (i = 0; i < sumForest; i++){
-    if (cmp(&tree1[indexF1], &tree2[indexF2]) < 0)
+    if (indexF2 >= F2->size || cmp(&tree1[indexF1], &tree2[indexF2]) < 0)
       candidate = tree1[indexF1++];
     
-    else if (cmp(&tree1[indexF1], &tree2[indexF2]) > 0)
+    else if (indexF1 >= F1->size || cmp(&tree1[indexF1], &tree2[indexF2]) > 0)
       candidate = tree2[indexF2++];
 
     else{
@@ -389,7 +391,60 @@ void computeMST(
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
 
-    
+    int nbRows = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
+    int offset = procRank * ceil((float)N / numProcs);
+    int m = 0; /* number of edges in the sub matrix adj */
+
+    for (int i = 0; i < nbRows; i++)
+      for (int j = 0; j < N; j++)
+	if (adj[i*N + j] > 0)
+	  m++;
+
+    struct w_edge edges[m];
+
+    int count = 0;
+    for (int i = 0; i < nbRows; i++)
+      for (int j = 0; j < N; j++)
+	if (adj[i*N + j] > 0){
+	  edges[count].u = i + offset;
+	  edges[count].v = j;
+	  edges[count++].w = adj[i*N + j];	  
+	}
+
+    struct array_of_tree *forest = kruskal(N, m, edges);
+
+    if (procRank == 0){
+      int size;
+      MPI_Recv(&size, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      int forest2_array[3*size];
+      MPI_Recv(forest2_array, 3*size, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      struct array_of_tree *forest2 = malloc(sizeof(struct array_of_tree));
+      struct w_edge *array = malloc(size*sizeof(struct w_edge));
+
+      forest2->size = size;
+      for (int i = 0; i < size; i++){
+	array[i].u = forest2_array[3*i];
+	array[i].v = forest2_array[3*i + 1];
+	array[i].w = forest2_array[3*i + 2];	
+      }
+      forest2->tree = array;
+
+      struct array_of_tree *result = merge(N, forest, forest2);
+
+      for (int i = 0; i < result->size; i++)
+	printf("%d %d\n", (result->tree)[i].u, (result->tree)[i].v);
+    }
+    else {
+      MPI_Send(&(forest->size), 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+      int array[3*forest->size];
+      for (int i = 0; i < forest->size; i++){
+	array[3*i] = edges[i].u;
+	array[3*i + 1] = edges[i].v;
+	array[3*i + 2] = edges[i].w;	
+      }
+      MPI_Send(array, 3*forest->size, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    }
+	  
 
   } else { // Invalid algorithm name
     if (procRank == 0) {
