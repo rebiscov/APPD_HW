@@ -168,6 +168,22 @@ struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tre
   return tree;
 }
 
+/* Define custom MPI_Op for finding min in prim-par using allreduce  */
+
+void minimumEdge(struct w_edge *in, struct w_edge *inout, int *len, MPI_Datatype *dptr){
+  int i;
+
+  for (i = 0; i < *len; i++){
+    if (in[i].w != inout[i].w)
+      inout[i] = in[i].w < inout[i].w ? in[i] : inout[i]; /* put in the result the minimum edge */
+    
+    else if (lexico(in[i].u, in[i].v, inout[i].u, inout[i].v))
+      inout[i] = in[i];
+    /* else, do nothing */
+  }
+}
+
+
 void computeMST(
     int N,
     int M,
@@ -182,6 +198,9 @@ void computeMST(
 
   MPI_Type_contiguous(3, MPI_INT, &MPI_WEdge);
   MPI_Type_commit(&MPI_WEdge);
+
+  MPI_Op MPI_Min;
+  MPI_Op_create((MPI_User_function*)minimumEdge, 1, &MPI_Min);
   
 
   if (strcmp(algoName, "prim-seq") == 0) { // Sequential Prim's algorithm
