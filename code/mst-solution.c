@@ -234,38 +234,37 @@ void computeMST(
     }
 
     while (count < N){
-      struct neighbor_in_tree candidate;
-      int last_i;
+      struct w_edge candidate;
       candidate.w = 0;
       for (i = 0; i < N; i++){
 	if (!(vertice_set[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
-	  last_i = i;
+	  candidate.v = i;
 	}
 	else if (!(vertice_set[i]) && D[i].w > 0 && candidate.w == D[i].w) {
-	  if (lexico(D[i].u, i, candidate.u, last_i)){
+	  if (lexico(D[i].u, i, candidate.u, candidate.v)){
 	      candidate.w = D[i].w;
 	      candidate.u = D[i].u;
-	      last_i = i;	      
+	      candidate.v = i;	      
 	    }
 	}
       }
       
-      if (last_i < candidate.u)
-	printf("%d %d\n", last_i, candidate.u);
+      if (candidate.v < candidate.u)
+	printf("%d %d\n", candidate.v, candidate.u);
       else
-	printf("%d %d\n", candidate.u, last_i);
+	printf("%d %d\n", candidate.u, candidate.v);
 
-      tree[count - 1].u = last_i;
+      tree[count - 1].u = candidate.v;
       tree[count - 1].v = candidate.u;
-      vertice_set[last_i] =  1;
+      vertice_set[candidate.v] =  1;
       count++;
 
       for (i = 0; i < N; i++){
-	if (!vertice_set[i] && adj[last_i*N + i] > 0 && (D[i].w > adj[last_i*N + i] || D[i].w == 0)){
-	  D[i].w = adj[last_i*N + i];
-	  D[i].u = last_i;
+	if (!vertice_set[i] && adj[candidate.v*N + i] > 0 && (D[i].w > adj[candidate.v*N + i] || D[i].w == 0)){
+	  D[i].w = adj[candidate.v*N + i];
+	  D[i].u = candidate.v;
 	}
       }
     }
