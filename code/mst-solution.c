@@ -5,6 +5,8 @@
  * @param algoName the name of the algorithm to be executed
  */
 
+#include <stddef.h>
+
 void swap(int *a, int *b){
   int temp;
   temp = *a;
@@ -96,16 +98,16 @@ void unify(int a, int b, struct element *P){ /* We unify (a & b must be represen
 
 /* Function for kruskal-par */
 
-struct array_of_tree {
-  struct w_edge *tree;
-  int size;
+struct array_of_forest {
+  int size;  
+  struct w_edge *forest;
 };
 
-struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
+struct array_of_forest* kruskal(int N, int m, struct w_edge *edges){
   int i, count = 0, a, b;
-  struct w_edge *tree = malloc(sizeof(struct w_edge)*m);
+  struct w_edge *forest = malloc(sizeof(struct w_edge)*m);
   struct element partition[N];
-  struct array_of_tree *retvalue = malloc(sizeof(struct array_of_tree));
+  struct array_of_forest *retvalue = malloc(sizeof(struct array_of_forest));
 
   qsort(edges, m, sizeof(struct w_edge), cmp);
 
@@ -119,23 +121,23 @@ struct array_of_tree* kruskal(int N, int m, struct w_edge *edges){
     b = find(edges[i].v, partition);
 
     if (a != b && edges[i].u != edges[i].v){
-      tree[count++] = edges[i];
+      forest[count++] = edges[i];
       unify(a, b, partition);
     }
   }
-  retvalue->tree = tree;
+  retvalue->forest = forest;
   retvalue->size = count;
 
   return retvalue;
 }
 
-struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tree *F2){
+struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of_forest *F2){
   struct element partition[N];
   int i, j, a, b, count = 0, sumForest = F1->size + F2->size, indexF1 = 0, indexF2 = 0;
-  struct array_of_tree *tree = malloc(sizeof(struct array_of_tree));
-  struct w_edge *tree1 = F1->tree, *tree2 = F2->tree, candidate;
+  struct array_of_forest *forest = malloc(sizeof(struct array_of_forest));
+  struct w_edge *forest1 = F1->forest, *forest2 = F2->forest, candidate;
 
-  tree->tree = malloc(sumForest*sizeof(struct w_edge));
+  forest->forest = malloc(sumForest*sizeof(struct w_edge));
 
   for (i = 0; i < N; i++){
     partition[i].x = i;
@@ -143,14 +145,14 @@ struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tre
   }
 
   for (i = 0; i < sumForest; i++){
-    if (indexF2 >= F2->size || cmp(&tree1[indexF1], &tree2[indexF2]) < 0)
-      candidate = tree1[indexF1++];
+    if (indexF2 >= F2->size || cmp(&forest1[indexF1], &forest2[indexF2]) < 0)
+      candidate = forest1[indexF1++];
     
-    else if (indexF1 >= F1->size || cmp(&tree1[indexF1], &tree2[indexF2]) > 0)
-      candidate = tree2[indexF2++];
+    else if (indexF1 >= F1->size || cmp(&forest1[indexF1], &forest2[indexF2]) > 0)
+      candidate = forest2[indexF2++];
 
     else{
-      candidate = tree1[indexF1];
+      candidate = forest1[indexF1];
       indexF1++;
       indexF2++;
     }
@@ -158,14 +160,14 @@ struct array_of_tree* merge(int N, struct array_of_tree *F1, struct array_of_tre
     a = find(candidate.u, partition);
     b = find(candidate.v, partition);
     if (a != b){
-      (tree->tree)[count++] = candidate;
+      (forest->forest)[count++] = candidate;
       unify(a, b, partition);
     }
   }
 
-  tree->size = count;
+  forest->size = count;
 
-  return tree;
+  return forest;
 }
 
 /* Define custom MPI_Op for finding min in prim-par using allreduce  */
@@ -204,7 +206,20 @@ void computeMST(
 
   MPI_Op MPI_Min;
   MPI_Op_create((MPI_User_function*)minimumEdge, 1, &MPI_Min);
+
+  int array_of_blocklength[] = {1, N};
+  MPI_Aint array_of_displacements[] = {offsetof(struct array_of_forest, size), offsetof(struct array_of_forest, forest)};
+  MPI_Datatype array_of_types[] = {MPI_INT, MPI_WEdge};
   
+  MPI_Datatype tmp_type, MPI_Forest;
+  MPI_Aint lb, extent;
+
+  MPI_Type_create_struct(2, array_of_blocklength, array_of_displacements, array_of_types, &tmp_type);
+
+  MPI_Type_get_extent(tmp_type, &lb, &extent);
+  MPI_Type_create_resized(tmp_type, lb, extent, &MPI_Forest);
+
+  MPI_Type_commit(&MPI_Forest);
 
   if (strcmp(algoName, "prim-seq") == 0) { // Sequential Prim's algorithm
     if (procRank == 0) {
@@ -216,13 +231,13 @@ void computeMST(
     // BEGIN IMPLEMENTATION HERE
 
     int i, j;
-    int vertice_set[N];
+    int verticeSet[N];
     struct edge tree[N-1];
     struct neighbor_in_tree D[N];
     int count = 1; // For now we suppose there is only the vertice 0 in the tree
 
-    memset(vertice_set, 0, sizeof(int)*N);
-    vertice_set[0] = 1; // We put 0 in the set of vertice
+    memset(verticeSet, 0, sizeof(int)*N);
+    verticeSet[0] = 1; // We put 0 in the set of vertice
 
     for (i = 0; i < N; i++){
       if (adj[i] > 0){
@@ -237,12 +252,12 @@ void computeMST(
       struct w_edge candidate;
       candidate.w = 0;
       for (i = 0; i < N; i++){
-	if (!(vertice_set[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
+	if (!(verticeSet[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
 	  candidate.v = i;
 	}
-	else if (!(vertice_set[i]) && D[i].w > 0 && candidate.w == D[i].w) {
+	else if (!(verticeSet[i]) && D[i].w > 0 && candidate.w == D[i].w) {
 	  if (lexico(D[i].u, i, candidate.u, candidate.v)){
 	      candidate.w = D[i].w;
 	      candidate.u = D[i].u;
@@ -258,11 +273,11 @@ void computeMST(
 
       tree[count - 1].u = candidate.v;
       tree[count - 1].v = candidate.u;
-      vertice_set[candidate.v] =  1;
+      verticeSet[candidate.v] =  1;
       count++;
 
       for (i = 0; i < N; i++){
-	if (!vertice_set[i] && adj[candidate.v*N + i] > 0 && (D[i].w > adj[candidate.v*N + i] || D[i].w == 0)){
+	if (!verticeSet[i] && adj[candidate.v*N + i] > 0 && (D[i].w > adj[candidate.v*N + i] || D[i].w == 0)){
 	  D[i].w = adj[candidate.v*N + i];
 	  D[i].u = candidate.v;
 	}
@@ -323,17 +338,17 @@ void computeMST(
   } else if (strcmp(algoName, "prim-par") == 0) { // Parallel Prim's algorithm
     // BEGIN IMPLEMENTATION HERE
 
-    int vertice_set[N]; /* boolean array to keep track of the vertices in the array */
-    int d_size = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
+    int verticeSet[N]; /* boolean array to keep track of the vertices in the array */
+    int DSize = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
     int offset = procRank * ceil((float)N / numProcs);
-    struct neighbor_in_tree D[d_size];
+    struct neighbor_in_tree D[DSize];
     struct edge tree[N-1];
     int i;
 
-    memset(vertice_set, 0, sizeof(int)*N);
-    vertice_set[0] = 1;
+    memset(verticeSet, 0, sizeof(int)*N);
+    verticeSet[0] = 1;
 
-    for (i = 0; i < d_size; i++) /* I initialize the D vector, in addition of the minimun distance, I add the vertice for which this distance is tight */
+    for (i = 0; i < DSize; i++) /* I initialize the D vector, in addition of the minimun distance, I add the vertice for which this distance is tight */
       if (adj[i*N + 0] > 0){
 	D[i].w = adj[i*N];
 	D[i].u = 0;
@@ -346,13 +361,13 @@ void computeMST(
     for (int count = 0; count < N - 1; count++){
       struct w_edge candidate; /* I store the candidate for the edge that minimizes the distance from a vertex to the tree */
       candidate.w = 0;
-      for (i = 0; i < d_size; i++){
-	if (!(vertice_set[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
+      for (i = 0; i < DSize; i++){
+	if (!(verticeSet[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
 	  candidate.v = i + offset;
 	}
-	else if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w == D[i].w) {
+	else if (!(verticeSet[offset + i]) && D[i].w > 0 && candidate.w == D[i].w) {
 	  if (lexico(D[i].u, i + offset, candidate.u, candidate.v)){
 	    candidate.w = D[i].w;
 	    candidate.u = D[i].u;
@@ -370,16 +385,16 @@ void computeMST(
       tree[count].v = recv.v;
       
       int u;
-      if (vertice_set[recv.u] == 0){ /* We add the new vertex to the tree */
+      if (verticeSet[recv.u] == 0){ /* We add the new vertex to the tree */
 	u = recv.u;
-	vertice_set[u] = 1;
+	verticeSet[u] = 1;
       }
       else{
 	u = recv.v;
-	vertice_set[u] = 1;	
+	verticeSet[u] = 1;	
       }
       
-      for (i = 0; i < d_size; i++){ /* Each processor updates its array D */
+      for (i = 0; i < DSize; i++){ /* Each processor updates its array D */
 	if ((D[i].w > adj[i*N + u] && adj[i*N + u] > 0) || D[i].w == 0){
 	  D[i].u = u;
 	  D[i].w = adj[i*N + u];
@@ -396,62 +411,7 @@ void computeMST(
 
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
-
-    int nbRows = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
-    int offset = procRank * ceil((float)N / numProcs);
-    int m = 0; /* number of edges in the sub matrix adj */
-
-    for (int i = 0; i < nbRows; i++)
-      for (int j = 0; j < N; j++)
-	if (adj[i*N + j] > 0)
-	  m++;
-
-    struct w_edge edges[m];
-
-    int count = 0;
-    for (int i = 0; i < nbRows; i++)
-      for (int j = 0; j < N; j++)
-	if (adj[i*N + j] > 0){
-	  edges[count].u = i + offset;
-	  edges[count].v = j;
-	  edges[count++].w = adj[i*N + j];	  
-	}
-
-    struct array_of_tree *forest = kruskal(N, m, edges);
-
-    if (procRank == 0){
-      int size;
-      MPI_Recv(&size, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      int forest2_array[3*size];
-      MPI_Recv(forest2_array, 3*size, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-      struct array_of_tree *forest2 = malloc(sizeof(struct array_of_tree));
-      struct w_edge *array = malloc(size*sizeof(struct w_edge));
-
-      forest2->size = size;
-      for (int i = 0; i < size; i++){
-	array[i].u = forest2_array[3*i];
-	array[i].v = forest2_array[3*i + 1];
-	array[i].w = forest2_array[3*i + 2];	
-      }
-      forest2->tree = array;
-
-      struct array_of_tree *result = merge(N, forest, forest2);
-
-      for (int i = 0; i < result->size; i++)
-	printf("%d %d\n", (result->tree)[i].u, (result->tree)[i].v);
-    }
-    else {
-      MPI_Send(&(forest->size), 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
-      int array[3*forest->size];
-      for (int i = 0; i < forest->size; i++){
-	array[3*i] = edges[i].u;
-	array[3*i + 1] = edges[i].v;
-	array[3*i + 2] = edges[i].w;	
-      }
-      MPI_Send(array, 3*forest->size, MPI_INT, 0, 0, MPI_COMM_WORLD);
-    }
-	  
-
+    
   } else { // Invalid algorithm name
     if (procRank == 0) {
       printf("ERROR: Invalid algorithm name: %s.\n", algoName);
