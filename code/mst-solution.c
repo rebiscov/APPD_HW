@@ -174,7 +174,10 @@ void minimumEdge(struct w_edge *in, struct w_edge *inout, int *len, MPI_Datatype
   int i;
 
   for (i = 0; i < *len; i++){
-    if (in[i].w != inout[i].w)
+    if (in[i].w == 0 || inout[i].w == 0)
+      inout[i] = in[i].w == 0 ? inout[i] : in[i];
+    
+    else if (in[i].w != inout[i].w)
       inout[i] = in[i].w < inout[i].w ? in[i] : inout[i]; /* put in the result the minimum edge */
     
     else if (lexico(in[i].u, in[i].v, inout[i].u, inout[i].v))
@@ -365,36 +368,26 @@ void computeMST(
       send[1] = candidate.u;
       send[2] = candidate.w;
 
-      MPI_Gather(send, 3, MPI_INT, recv, 3, MPI_INT, 0, MPI_COMM_WORLD); /* Every processor sends the edge it chose to processor 0*/
+      struct w_edge snd, recv;
 
-      if (procRank == 0){ /* Processor 0 takes the minimum */
-	int u = recv[0], v = recv[1], w = recv[2];
-	for (int j = 1; j < numProcs; j++)
-	  if (w == 0 || (recv[3*j+2] != 0 && recv[3*j + 2] < w || (recv[3*j + 2] == w && lexico(recv[3*j], recv[3*j + 1], u, v)))){
-	    u = recv[3*j];
-	    v = recv[3*j + 1];
-	    w = recv[3*j + 2];
-	  }
-	send[0] = u;
-	send[1] = v;
-	send[2] = w;
-      }
+      snd.u = send[0];
+      snd.v = send[1];
+      snd.w = send[2];
 
+      MPI_Allreduce(&snd, &recv, 1, MPI_WEdge, MPI_Min, MPI_COMM_WORLD);
 
-      MPI_Bcast(&send[0], 3, MPI_INT, 0, MPI_COMM_WORLD); /* Processor 0 broadcast the result */
-
-      if (send[0] > send[1]) /* We add the chosen edge in the tree*/
-	swap(&send[0], &send[1]);
-      tree[count].u = send[0];
-      tree[count].v = send[1];
+      if (recv.u > recv.v) /* We add the chosen edge in the tree*/
+	swap(&recv.u, &recv.v);
+      tree[count].u = recv.u;
+      tree[count].v = recv.v;
       
       int u;
-      if (vertice_set[send[0]] == 0){ /* We add the new vertex to the tree */
-	u = send[0];
+      if (vertice_set[recv.u] == 0){ /* We add the new vertex to the tree */
+	u = recv.u;
 	vertice_set[u] = 1;
       }
       else{
-	u = send[1];
+	u = recv.v;
 	vertice_set[u] = 1;	
       }
       
