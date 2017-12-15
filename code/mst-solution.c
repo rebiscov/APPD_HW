@@ -330,8 +330,6 @@ void computeMST(
     struct neighbor_in_tree D[d_size];
     struct edge tree[N-1];
     int i;
-    int recv[3*numProcs];
-    int send[3];
 
     memset(vertice_set, 0, sizeof(int)*N);
     vertice_set[0] = 1;
@@ -347,34 +345,25 @@ void computeMST(
       }
 
     for (int count = 0; count < N - 1; count++){
-      struct neighbor_in_tree candidate; /* I store the candidate for the minimum distance from a vertice to another vertice in the tree*/
-      int last_i; /* closest vertice to tree found yet */
+      struct w_edge candidate; /* I store the candidate for the edge that minimizes the distance from a vertex to the tree */
       candidate.w = 0;
       for (i = 0; i < d_size; i++){
 	if (!(vertice_set[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
-	  last_i = i + offset;
+	  candidate.v = i + offset;
 	}
 	else if (!(vertice_set[offset + i]) && D[i].w > 0 && candidate.w == D[i].w) {
-	  if (lexico(D[i].u, i + offset, candidate.u, last_i)){
+	  if (lexico(D[i].u, i + offset, candidate.u, candidate.v)){
 	    candidate.w = D[i].w;
 	    candidate.u = D[i].u;
- 	    last_i = i + offset;	      
+ 	    candidate.v = i + offset;	      
 	  }
 	}
       }
-      send[0] = last_i;
-      send[1] = candidate.u;
-      send[2] = candidate.w;
-
-      struct w_edge snd, recv;
-
-      snd.u = send[0];
-      snd.v = send[1];
-      snd.w = send[2];
-
-      MPI_Allreduce(&snd, &recv, 1, MPI_WEdge, MPI_Min, MPI_COMM_WORLD);
+      struct w_edge recv;
+      
+      MPI_Allreduce(&candidate, &recv, 1, MPI_WEdge, MPI_Min, MPI_COMM_WORLD); /* We take the edge with minimum weight and we send it to everybody  */
 
       if (recv.u > recv.v) /* We add the chosen edge in the tree*/
 	swap(&recv.u, &recv.v);
