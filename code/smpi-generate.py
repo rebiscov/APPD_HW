@@ -7,6 +7,7 @@ import math
 link_latency = "10us"
 link_bandwidth = 10
 link_bandwidth_unit = "Gbps"
+last_link_available = 0
 
 # XML generation functions
 def issueHead():
@@ -83,14 +84,15 @@ for i in range(0,num_hosts):
 	fh.write(issueHost(i))
 
 # Create links
-for i in range(0,num_hosts*num_hosts):
+for i in range(0,num_hosts*(num_hosts-1)/2):
 	fh.write(issueLink1(i))
 
 # Create routes
 for i in range (0,num_hosts):
 	for j in range(i+1,num_hosts):
 		fh.write(issueRouteHead(i,j))
-  		fh.write(issueRouteLink1(i*num_hosts + j))
+  		fh.write(issueRouteLink1(last_link_available))
+                last_link_available = last_link_available + 1
     		fh.write(issueRouteTail())
 
 fh.write(issueTail())
