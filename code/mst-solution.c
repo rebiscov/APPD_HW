@@ -418,10 +418,11 @@ void computeMST(
     int currentRank = procRank; /* rank convinient to choose who has to send/recv */
 
     struct array_of_forest recv;
+    recv.forest = malloc(sizeof(struct w_edge)*N);
     
     while(aliveProcs != 1){
       /* If there is an odd number of alive processors, the last one should not receive nor send informations to others */
-      if (!(aliveProcs % 2 == 1 && procRank == aliveProcs - 1)){
+      if (!(aliveProcs % 2 == 1 && currentRank == aliveProcs - 1)){
 
 	if (currentRank % 2 == 0){ /* even processors receive and merge */
 	  int src = procRank + (1 << n);
@@ -430,12 +431,13 @@ void computeMST(
 
 	  struct w_edge *temp = forest->forest;
 	  
-	  forest = merge(N, forest, &recv);
+	  forest = merge(N, forest, &recv); /* we merge both forest */
 	  
-	  free(recv.forest);
-	  free(temp);
+	  free(temp); /* we free the two forests we do not need anymore */
 	}
-	else{ /* odd processors send all and stop */
+
+	
+	else { /* odd processors send all and stop */
 	  int dest = procRank - (1 << n);
 	  MPI_Send(&forest->size, 1, MPI_INT, dest, 0, MPI_COMM_WORLD);
 	  MPI_Send(forest->forest, forest->size, MPI_WEdge, dest, 0, MPI_COMM_WORLD);
@@ -446,19 +448,17 @@ void computeMST(
 	
       }
 
-      n++;
+      n++; /* changing the shift, the currentRank and the number f alive procs */
       aliveProcs = (aliveProcs >> 1) + (aliveProcs & 1);
-      currentRank = (currentRank >> 1) + (currentRank & 1);
+      currentRank = currentRank >> 1;
     }
 
-    if (procRank == 0)
+    if (procRank == 0){ /* in the end, the processor 0 has all the tree */
       for (int i = 0; i < forest->size; i++)
-	if (forest->forest[i].u < forest->forest[i].v)
-	  printf("%d %d\n", forest->forest[i].u, forest->forest[i].v);
-	else
-	  printf("%d %d\n", forest->forest[i].v, forest->forest[i].u);
+	printf("%d %d\n", forest->forest[i].u, forest->forest[i].v);
+      free(forest->forest);      
+    }
 
-    free(forest->forest);
     
   } else { // Invalid algorithm name
     if (procRank == 0) {
