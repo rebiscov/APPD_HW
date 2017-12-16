@@ -103,20 +103,20 @@ struct array_of_forest {
   struct w_edge *forest;
 };
 
-struct array_of_forest* kruskal(int N, int m, struct w_edge *edges){
+struct array_of_forest* kruskal(int N, int numberEdges, struct w_edge *edges){
   int i, count = 0, a, b;
-  struct w_edge *forest = malloc(sizeof(struct w_edge)*m);
+  struct w_edge *forest = malloc(sizeof(struct w_edge)*numberEdges);
   struct element partition[N];
   struct array_of_forest *retvalue = malloc(sizeof(struct array_of_forest));
 
-  qsort(edges, m, sizeof(struct w_edge), cmp);
+  qsort(edges, numberEdges, sizeof(struct w_edge), cmp);
 
   for (i = 0; i < N; i++){
     partition[i].x = i;
     partition[i].nb = 1;
   }
 
-  for (i = 0; i < m; i++){
+  for (i = 0; i < numberEdges; i++){
     a = find(edges[i].u, partition);
     b = find(edges[i].v, partition);
 
@@ -206,20 +206,6 @@ void computeMST(
 
   MPI_Op MPI_Min;
   MPI_Op_create((MPI_User_function*)minimumEdge, 1, &MPI_Min);
-
-  int array_of_blocklength[] = {1, N};
-  MPI_Aint array_of_displacements[] = {offsetof(struct array_of_forest, size), offsetof(struct array_of_forest, forest)};
-  MPI_Datatype array_of_types[] = {MPI_INT, MPI_WEdge};
-  
-  MPI_Datatype tmp_type, MPI_Forest;
-  MPI_Aint lb, extent;
-
-  MPI_Type_create_struct(2, array_of_blocklength, array_of_displacements, array_of_types, &tmp_type);
-
-  MPI_Type_get_extent(tmp_type, &lb, &extent);
-  MPI_Type_create_resized(tmp_type, lb, extent, &MPI_Forest);
-
-  MPI_Type_commit(&MPI_Forest);
 
   if (strcmp(algoName, "prim-seq") == 0) { // Sequential Prim's algorithm
     if (procRank == 0) {
@@ -339,16 +325,16 @@ void computeMST(
     // BEGIN IMPLEMENTATION HERE
 
     int verticeSet[N]; /* boolean array to keep track of the vertices in the array */
-    int DSize = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
+    int numRows = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */
     int offset = procRank * ceil((float)N / numProcs);
-    struct neighbor_in_tree D[DSize];
+    struct neighbor_in_tree D[numRows];
     struct edge tree[N-1];
     int i;
 
     memset(verticeSet, 0, sizeof(int)*N);
     verticeSet[0] = 1;
 
-    for (i = 0; i < DSize; i++) /* I initialize the D vector, in addition of the minimun distance, I add the vertice for which this distance is tight */
+    for (i = 0; i < numRows; i++) /* I initialize the D vector, in addition of the minimun distance, I add the vertice for which this distance is tight */
       if (adj[i*N + 0] > 0){
 	D[i].w = adj[i*N];
 	D[i].u = 0;
@@ -361,7 +347,7 @@ void computeMST(
     for (int count = 0; count < N - 1; count++){
       struct w_edge candidate; /* I store the candidate for the edge that minimizes the distance from a vertex to the tree */
       candidate.w = 0;
-      for (i = 0; i < DSize; i++){
+      for (i = 0; i < numRows; i++){
 	if (!(verticeSet[offset + i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
@@ -394,7 +380,7 @@ void computeMST(
 	verticeSet[u] = 1;	
       }
       
-      for (i = 0; i < DSize; i++){ /* Each processor updates its array D */
+      for (i = 0; i < numRows; i++){ /* Each processor updates its array D */
 	if ((D[i].w > adj[i*N + u] && adj[i*N + u] > 0) || D[i].w == 0){
 	  D[i].u = u;
 	  D[i].w = adj[i*N + u];
@@ -411,6 +397,23 @@ void computeMST(
 
   } else if (strcmp(algoName, "kruskal-par") == 0) { // Parallel Kruskal's algorithm
     // BEGIN IMPLEMENTATION HERE
+
+    struct w_edge edges[M];
+    int numRows = procRank != numProcs - 1 ? ceil((float)N/numProcs) : N - ceil((float)N/numProcs)*(numProcs-1); /* Number of rows that the processor has */    
+    int offset = procRank * ceil((float)N / numProcs);
+    int count = 0;
+
+    for(int i = 0; i < numRows; i++) /* Put the edges in an array, it is not necessary to take all the edges in the submatrix adj, If we look at it globally, we take half the matrix, and because the matrix is symmetric, all the edges are covered by at least one processor */
+      for (int j = i + offset; j < N; j++)
+	if (adj[i*N + j] > 0){
+	  edges[count].u = i + offset;
+	  edges[count].v = j;
+	  edges[count++].w = adj[i*N + j];
+	}
+
+    struct array_of_forest *forest = kruskal(N, count, edges);
+
+    
     
   } else { // Invalid algorithm name
     if (procRank == 0) {
