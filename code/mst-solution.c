@@ -457,6 +457,8 @@ void computeMST(
 	  printf("%d %d\n", forest->forest[i].u, forest->forest[i].v);
 	else
 	  printf("%d %d\n", forest->forest[i].v, forest->forest[i].u);
+
+    free(forest->forest);
     
   } else { // Invalid algorithm name
     if (procRank == 0) {
