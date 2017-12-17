@@ -1,0 +1,219 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Arsclassica Article
+% LaTeX Template
+% Version 1.1 (1/8/17)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Lorenzo Pantieri (http://www.lorenzopantieri.net) with extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[
+10pt, % Main document font size
+a4paper, % Paper type, use 'letterpaper' for US Letter paper
+oneside, % One page layout (no page indentation)
+%twoside, % Two page layout (page indentation for binding and different headers)
+headinclude,footinclude, % Extra spacing for the header and footer
+BCOR5mm, % Binding correction
+]{scrartcl}
+
+\input{structure.tex} % Include the structure.tex file which specified the document structure and layout
+
+\hyphenation{Fortran hy-phen-ation} % Specify custom hyphenation points in words with dashes where you would like hyphenation to occur, or alternatively, don't put any dashes in a word to stop hyphenation altogether
+
+%----------------------------------------------------------------------------------------
+%	TITLE AND AUTHOR(S)
+%----------------------------------------------------------------------------------------
+
+\title{\normalfont\spacedallcaps{Article Title}} % The article title
+
+%\subtitle{Subtitle} % Uncomment to display a subtitle
+
+\author{\spacedlowsmallcaps{Vincent Rébiscoul}} % The article author(s) - author affiliations need to be specified in the AUTHOR AFFILIATIONS block
+
+\date{} % An optional date to appear under the author(s)
+\usepackage{caption}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+%----------------------------------------------------------------------------------------
+%	HEADERS
+%----------------------------------------------------------------------------------------
+
+\renewcommand{\sectionmark}[1]{\markright{\spacedlowsmallcaps{#1}}} % The header for all pages (oneside) or for even pages (twoside)
+%\renewcommand{\subsectionmark}[1]{\markright{\thesubsection~#1}} % Uncomment when using the twoside option - this modifies the header on odd pages
+\lehead{\mbox{\llap{\small\thepage\kern1em\color{halfgray} \vline}\color{halfgray}\hspace{0.5em}\rightmark\hfil}} % The header style
+
+\pagestyle{scrheadings} % Enable the headers specified in this block
+
+%----------------------------------------------------------------------------------------
+%	TABLE OF CONTENTS & LISTS OF FIGURES AND TABLES
+%----------------------------------------------------------------------------------------
+
+\maketitle % Print the title/author/date block
+
+\setcounter{tocdepth}{2} % Set the depth of the table of contents to show sections and subsections only
+
+\tableofcontents % Print the table of contents
+
+\listoffigures % Print the list of figures
+
+\listoftables % Print the list of tables
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\section*{Abstract} % This section will not appear in the table of
+% contents due to the star (\section*)
+
+In this report, we are going to try several configurations and with
+Simgrid, we will evaluate our programs and compare the sequential
+algorithms with the parralel algorithms. The topology I used for this
+is a clique. The platform file and the hostfile were generated using a
+modification of the script that was given to us during TPs and was
+originally meant to generate a ring topology. I precise that I will
+not use ring topology because I think it is not necessary (there is no
+interest to run a graph algorithm on a ring). Moreover, I find it too
+bad that I one link is broken, the network can not work.
+
+%----------------------------------------------------------------------------------------
+
+\newpage % Start the article content on the second page, remove this if you have a longer abstract that goes onto the second page
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+\section{Methodology}
+
+We are going to separate the analysis of the Kruskal's algorithm and
+Prim's algorithm. To do the analysis, we will test several
+cases. First I note $G=(V, E)$ our graph and $n=|V|$ and $m=|E|$. We
+will test three cases for $m$:
+\begin{itemize}
+\item $m=2\times n$ (linear)
+\item $m=\frac{n^{\frac{3}{2}}}{2}$
+\end{itemize}
+
+And I will test those configurations for $n=500$ (my
+laptop can not handle bigger graphs).
+I will test this with $4$ cores and $10$ cores. I will take $500$ for
+the maximum weight. Indeed, this value should not have a lot of
+consequences on the speed of the algorithm. I will also test a latency
+of $1\mu s$ and $100\mu s$. I will call the linear graph (with
+$m=2\times n$) the linear graph and the graph with $m =
+\frac{n^{\frac{3}{2}}}{2}$ the $\frac{3}{2}$ graph.
+
+\section{Results of the tests}
+
+\subsection{Sequential algorithms}
+\begin{center}
+  \captionof{table}{Speed of the sequential algorithms (in seconds)}
+  \begin{tabular}{lll}
+    & Linear & 3/2\\
+    Prim & 5$\times$ 10\(^{\text{-3}}\) & 5.3$\times$ 10\(^{\text{-3}}\)\\
+    Kruskal & 2$\times$ 10\(^{\text{-3}}\) & 3.4$\times$ 10\(^{\text{-3}}\)\\
+  \end{tabular}
+\end{center}
+
+\subsection{Parallel Prim's algorithm}
+\begin{center}
+  \captionof{table}{Speed of the parallel Prim's algorithm (in seconds)}  
+  \begin{tabular}{lllll}
+    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores & 100$\mu s$/8 cores\\
+    Linear & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$ 10\(^{\text{-3}}\) & 3$\times$ 10\(^{\text{-1}}\) & 4$\times$ 10\(^{\text{-1}}\)\\
+    3/2 & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$ 10\(^{\text{-3}}\) & 3$\times$ 10\(^{\text{-1}}\) & 4$\times$ 10\(^{\text{-1}}\)\\
+  \end{tabular}
+\end{center}
+
+\subsection{Parallel Kruskal's algorithm}
+\begin{center}
+  \captionof{table}{Speed of the parallel Kruskal's algorithm (in seconds)}  
+  \begin{tabular}{lllll}
+    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores & 100$\mu s$/8 cores\\
+    Linear & 9$\times$ 10\(^{\text{-6}}\) & 1.3$\times$ 10\(^{\text{-5}}\) & 8.6$\times$ 10\(^{\text{-4}}\) & 1.3$\times$ 10\(^{\text{-3}}\)\\
+    3/2 & 9.3$\times$ 10\(^{\text{-6}}\) & 1.4$\times$ 10\(^{\text{-5}}\) & 8.5$\times$ 10\(^{\text{-4}}\) & 1.2$\times$ 10\(^{\text{-3}}\)\\
+  \end{tabular}
+\end{center}
+
+First, we can see that there is little different between the linear
+graph and the 3/2 graph. That could be expected because in every
+cases, because the graph is represented by a matrix, the complexity
+will always depends on $n^2$ and not on $m$. This is why we do not
+have a lot of differences between the linear graph and the $3/2$
+graph, the number of edges has little effect on the number of steps
+that the algorithm will do.
+
+Moreover, we see that when running the parallel algorithms on 8 cores,
+it is a bit slower that on 4 cores. I think this comes from the fact
+that my processor has only 4 cores and when running the algorithms on
+8 cores, I do not computation time but I loose time in communications
+between the ``virtual'' processors. Now we will compare the sequential
+algorithms. I will just study the linear graph because we saw that the
+results were similar with the 3/2 graph. I will only study the case
+with 4 cores because this is when my computer is the more efficient.
+
+\section{Comparison between sequential and parallel algorithms}
+
+\subsection{Sequential Prim VS Parallel Prim}
+\begin{figure}
+  \centering
+  \includegraphics[width=10cm]{com_prim.png}
+  \caption{Comparison of sequential Prim's algorithm and parallel
+    Prim's algorithm}
+  \label{fig:comp_prim}
+\end{figure}
+
+As we can see on figure~\ref{fig:comp_prim} the sequential algorithm
+is a little worst than the parallel one with a latency of $1\mu s$ but
+a lot better than the parallel one with a latency of $100 \mu$ (please
+note that the scale is logarithmic). One can conclude that the latency
+has a lot of influence on the efficiency of the parallel Prim's
+algorithm. This is probably due to the fact that when all the
+processors have their candidates, they have to send it the processor 0
+that has to handle a lot of communications at one time, and during
+this time the other processor are not working.
+
+\subsection{Sequential Kruskal VS Parallel Kruskal}
+
+\begin{figure}
+  \centering
+  \includegraphics[width=10cm]{com_kruskal.png}
+  \caption{Comparison of sequential Kruskal's algorithm and parallel
+    Kruskal's algorithm}
+  \label{fig:comp_kruskal}
+\end{figure}
+
+As we can see on figure~\ref{fig:comp_kruskal}, for a latency of $1\mu
+s$, the parallel algorithm is a lot better than the sequential
+one. For a latency of $100 \mu s$, the parallel algorithm is a little
+better than the sequential one. First conclusion, the efficiency of
+the parallel algorithm is a lot better. I think we can explain this
+because in the parallel Kruskal, a processor wait little for another
+one. Indeed a processor do some computations send or receive
+informations and then continue working but is does not need to wait
+for an answer of the processor it communicated with. Also, the
+algorithm is a lot less ``centralized''. There is no processor that
+have to regularly get informations from everyone, a processor only
+work with one close neighbor. I think this is why the parallel
+algorithm is a lot better.
+
+\section{Conclusion}
+
+To conclude, 
+
+\end{document}
