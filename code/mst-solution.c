@@ -44,7 +44,7 @@ int lexico(int i, int j, int k, int l){ // return 1 if the couple (i, j) < (k, l
 
 struct element{ /* This structure will be convinient for the union find */
   int x; /* the "parent" of the element, a represent of a class has himself as his parent */
-  int nb;
+  int nb; /* represent the number of elements in a class */
 };
 
 struct w_edge{
@@ -53,7 +53,7 @@ struct w_edge{
   int w;
 };
 
-int cmp(const void *e1, const void *e2){
+int cmp(const void *e1, const void *e2){ /* The comparison function for edges */
   if( (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w != 0)
     return (*(struct w_edge*)e1).w - (*(struct w_edge*)e2).w;
   
@@ -66,7 +66,7 @@ int cmp(const void *e1, const void *e2){
 
 /* Functions for the union-find structure */
 
-int find(int x, struct element *P){ /* We find, and compress the structure */
+int find(int x, struct element *P){ /* We find, and compress the structure, I use an algorithm of lazy compression */
   int y, z;
 
   y = x;
@@ -98,12 +98,12 @@ void unify(int a, int b, struct element *P){ /* We unify (a & b must be represen
 
 /* Function for kruskal-par */
 
-struct array_of_forest {
+struct array_of_forest { /* strcture to represent of forest, size is the number of elements in the array forest */
   int size;  
   struct w_edge *forest;
 };
 
-struct array_of_forest* kruskal(int N, int numberEdges, struct w_edge *edges){
+struct array_of_forest* kruskal(int N, int numberEdges, struct w_edge *edges){ /* Just a Kruskal algorithm, returns a structure array_of_forest */
   int i, count = 0, a, b;
   struct w_edge *forest = malloc(sizeof(struct w_edge)*numberEdges);
   struct element partition[N];
@@ -131,7 +131,7 @@ struct array_of_forest* kruskal(int N, int numberEdges, struct w_edge *edges){
   return retvalue;
 }
 
-struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of_forest *F2){
+struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of_forest *F2){ /* function which merges two forest */
   struct element partition[N];
   int i, j, a, b, count = 0, sumForest = F1->size + F2->size, indexF1 = 0, indexF2 = 0;
   struct array_of_forest *forest = malloc(sizeof(struct array_of_forest));
@@ -144,8 +144,8 @@ struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of
     partition[i].nb = 1;
   }
 
-  for (i = 0; i < sumForest; i++){
-    if (indexF2 >= F2->size || cmp(&forest1[indexF1], &forest2[indexF2]) < 0)
+  for (i = 0; i < sumForest; i++){ 
+    if (indexF2 >= F2->size || cmp(&forest1[indexF1], &forest2[indexF2]) < 0) /* We look at the current smallest elements and we take the smallest one */
       candidate = forest1[indexF1++];
     
     else if (indexF1 >= F1->size || cmp(&forest1[indexF1], &forest2[indexF2]) > 0)
@@ -157,7 +157,7 @@ struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of
       indexF2++;
     }
     
-    a = find(candidate.u, partition);
+    a = find(candidate.u, partition); /* We pute the smallest element in the forest if it does not create a cycle */
     b = find(candidate.v, partition);
     if (a != b){
       (forest->forest)[count++] = candidate;
@@ -172,17 +172,17 @@ struct array_of_forest* merge(int N, struct array_of_forest *F1, struct array_of
 
 /* Define custom MPI_Op for finding min in prim-par using allreduce  */
 
-void minimumEdge(struct w_edge *in, struct w_edge *inout, int *len, MPI_Datatype *dptr){
+void minimumEdge(struct w_edge *in, struct w_edge *inout, int *len, MPI_Datatype *dptr){ /* This function takes two w_edge and returns the smallest one */
   int i;
 
   for (i = 0; i < *len; i++){
-    if (in[i].w == 0 || inout[i].w == 0)
+    if (in[i].w == 0 || inout[i].w == 0) /* If one of the edges is none existant, returns the other one */
       inout[i] = in[i].w == 0 ? inout[i] : in[i];
     
-    else if (in[i].w != inout[i].w)
+    else if (in[i].w != inout[i].w) 
       inout[i] = in[i].w < inout[i].w ? in[i] : inout[i]; /* put in the result the minimum edge */
     
-    else if (lexico(in[i].u, in[i].v, inout[i].u, inout[i].v))
+    else if (lexico(in[i].u, in[i].v, inout[i].u, inout[i].v)) /* If both w_edges have the same weight, return the smallest one with lexicographic order */
       inout[i] = in[i];
     /* else, do nothing */
   }
@@ -205,7 +205,7 @@ void computeMST(
   MPI_Type_commit(&MPI_WEdge);
 
   MPI_Op MPI_Min;
-  MPI_Op_create((MPI_User_function*)minimumEdge, 1, &MPI_Min);
+  MPI_Op_create((MPI_User_function*)minimumEdge, 1, &MPI_Min); /* I create the operator min */
 
   if (strcmp(algoName, "prim-seq") == 0) { // Sequential Prim's algorithm
     if (procRank == 0) {
@@ -225,7 +225,7 @@ void computeMST(
     memset(verticeSet, 0, sizeof(int)*N);
     verticeSet[0] = 1; // We put 0 in the set of vertice
 
-    for (i = 0; i < N; i++){
+    for (i = 0; i < N; i++){ /* Fill the array D, at the beginning, there is only 0 in the tree */
       if (adj[i] > 0){
 	D[i].u = 0;
 	D[i].w = adj[i];
@@ -234,16 +234,16 @@ void computeMST(
 	D[i].w = 0;
     }
 
-    while (count < N){
-      struct w_edge candidate;
+    while (count < N){ /* Let find the minimum edges connected to the tree */
+      struct w_edge candidate; /* This is our edge which is a candidate for the minimum */
       candidate.w = 0;
       for (i = 0; i < N; i++){
-	if (!(verticeSet[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){
+	if (!(verticeSet[i]) && D[i].w > 0 && (candidate.w == 0 || candidate.w > D[i].w)){ /* If i is not in the tree and is the closer vertice to the tree, add the edge which connect i to the tree*/
 	  candidate.w = D[i].w;
 	  candidate.u = D[i].u;
 	  candidate.v = i;
 	}
-	else if (!(verticeSet[i]) && D[i].w > 0 && candidate.w == D[i].w) {
+	else if (!(verticeSet[i]) && D[i].w > 0 && candidate.w == D[i].w) { /* If i is not in the tree and it improves the solution not in terms of weight but for the lexicographic order, add the edge which connect i to the tree */
 	  if (lexico(D[i].u, i, candidate.u, candidate.v)){
 	      candidate.w = D[i].w;
 	      candidate.u = D[i].u;
@@ -257,12 +257,12 @@ void computeMST(
       else
 	printf("%d %d\n", candidate.u, candidate.v);
 
-      tree[count - 1].u = candidate.v;
+      tree[count - 1].u = candidate.v; /* Print the result and put it in the tree */
       tree[count - 1].v = candidate.u;
       verticeSet[candidate.v] =  1;
       count++;
 
-      for (i = 0; i < N; i++){
+      for (i = 0; i < N; i++){ /* We update array D knowing that we added the vertice candidate.v to the tree */
 	if (!verticeSet[i] && adj[candidate.v*N + i] > 0 && (D[i].w > adj[candidate.v*N + i] || D[i].w == 0)){
 	  D[i].w = adj[candidate.v*N + i];
 	  D[i].u = candidate.v;
