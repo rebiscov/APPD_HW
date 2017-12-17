@@ -36,7 +36,7 @@ BCOR5mm, % Binding correction
 %	TITLE AND AUTHOR(S)
 %----------------------------------------------------------------------------------------
 
-\title{\normalfont\spacedallcaps{Article Title}} % The article title
+\title{\normalfont\spacedallcaps{Results of the experiments}} % The article title
 
 %\subtitle{Subtitle} % Uncomment to display a subtitle
 
@@ -56,7 +56,7 @@ BCOR5mm, % Binding correction
 \renewcommand{\sectionmark}[1]{\markright{\spacedlowsmallcaps{#1}}} % The header for all pages (oneside) or for even pages (twoside)
 %\renewcommand{\subsectionmark}[1]{\markright{\thesubsection~#1}} % Uncomment when using the twoside option - this modifies the header on odd pages
 \lehead{\mbox{\llap{\small\thepage\kern1em\color{halfgray} \vline}\color{halfgray}\hspace{0.5em}\rightmark\hfil}} % The header style
-
+\newcommand{\bigo}{\mathcal{O}}
 \pagestyle{scrheadings} % Enable the headers specified in this block
 
 %----------------------------------------------------------------------------------------
@@ -82,13 +82,13 @@ BCOR5mm, % Binding correction
 
 In this report, we are going to try several configurations and with
 Simgrid, we will evaluate our programs and compare the sequential
-algorithms with the parralel algorithms. The topology I used for this
+algorithms with the parallel algorithms. The topology I used for this
 is a clique. The platform file and the hostfile were generated using a
-modification of the script that was given to us during TPs and was
+modification of the script that was given to us during TP 2 and was
 originally meant to generate a ring topology. I precise that I will
 not use ring topology because I think it is not necessary (there is no
 interest to run a graph algorithm on a ring). Moreover, I find it too
-bad that I one link is broken, the network can not work.
+bad that if one link is broken, the network can not work.
 
 %----------------------------------------------------------------------------------------
 
@@ -105,15 +105,15 @@ Prim's algorithm. To do the analysis, we will test several
 cases. First I note $G=(V, E)$ our graph and $n=|V|$ and $m=|E|$. We
 will test three cases for $m$:
 \begin{itemize}
-\item $m=2\times n$ (linear)
-\item $m=\frac{n^{\frac{3}{2}}}{2}$
+\item $m=2\times n$ (linear) the graph is in the file linear.txt
+\item $m=\frac{n^{\frac{3}{2}}}{2}$ the graph is in the file threehalf.txt
 \end{itemize}
 
 And I will test those configurations for $n=500$ (my
-laptop can not handle bigger graphs).
+laptop can not handle bigger graphs, the generation of  a graph never ends).
 I will test this with $4$ cores and $10$ cores. I will take $500$ for
 the maximum weight. Indeed, this value should not have a lot of
-consequences on the speed of the algorithm. I will also test a latency
+consequences on the speed of the algorithm (see appendix~A~\ref{sect:appendixa}). I will also test a latency
 of $1\mu s$ and $100\mu s$. I will call the linear graph (with
 $m=2\times n$) the linear graph and the graph with $m =
 \frac{n^{\frac{3}{2}}}{2}$ the $\frac{3}{2}$ graph.
@@ -123,30 +123,55 @@ $m=2\times n$) the linear graph and the graph with $m =
 \subsection{Sequential algorithms}
 \begin{center}
   \captionof{table}{Speed of the sequential algorithms (in seconds)}
-  \begin{tabular}{lll}
+  \begin{tabular}{|l|l|l|}
+    \hline
     & Linear & 3/2\\
-    Prim & 5$\times$ 10\(^{\text{-3}}\) & 5.3$\times$ 10\(^{\text{-3}}\)\\
-    Kruskal & 2$\times$ 10\(^{\text{-3}}\) & 3.4$\times$ 10\(^{\text{-3}}\)\\
+    \hline    
+    Prim & 5$\times$ 10\(^{\text{-3}}\) & 5.3$\times$
+                                          10\(^{\text{-3}}\)\\
+    \hline    
+    Kruskal & 2$\times$ 10\(^{\text{-3}}\) & 3.4$\times$
+                                             10\(^{\text{-3}}\)\\
+    \hline    
   \end{tabular}
 \end{center}
 
 \subsection{Parallel Prim's algorithm}
 \begin{center}
   \captionof{table}{Speed of the parallel Prim's algorithm (in seconds)}  
-  \begin{tabular}{lllll}
-    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores & 100$\mu s$/8 cores\\
-    Linear & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$ 10\(^{\text{-3}}\) & 3$\times$ 10\(^{\text{-1}}\) & 4$\times$ 10\(^{\text{-1}}\)\\
-    3/2 & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$ 10\(^{\text{-3}}\) & 3$\times$ 10\(^{\text{-1}}\) & 4$\times$ 10\(^{\text{-1}}\)\\
+  \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores &
+                                                                 100$\mu s$/8 cores\\
+        \hline
+    Linear & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$
+                                            10\(^{\text{-3}}\) &
+                                                                 3$\times$ 10\(^{\text{-1}}\) & 4$\times$ 10\(^{\text{-1}}\)\\
+    \hline    
+    3/2 & 3$\times$ 10\(^{\text{-3}}\) & 4$\times$ 10\(^{\text{-3}}\)
+                                          & 3$\times$
+                                            10\(^{\text{-1}}\) &
+                                                                 4$\times$ 10\(^{\text{-1}}\)\\
+    \hline    
   \end{tabular}
 \end{center}
 
 \subsection{Parallel Kruskal's algorithm}
 \begin{center}
   \captionof{table}{Speed of the parallel Kruskal's algorithm (in seconds)}  
-  \begin{tabular}{lllll}
-    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores & 100$\mu s$/8 cores\\
-    Linear & 9$\times$ 10\(^{\text{-6}}\) & 1.3$\times$ 10\(^{\text{-5}}\) & 8.6$\times$ 10\(^{\text{-4}}\) & 1.3$\times$ 10\(^{\text{-3}}\)\\
-    3/2 & 9.3$\times$ 10\(^{\text{-6}}\) & 1.4$\times$ 10\(^{\text{-5}}\) & 8.5$\times$ 10\(^{\text{-4}}\) & 1.2$\times$ 10\(^{\text{-3}}\)\\
+  \begin{tabular}{|l|l|l|l|l|}
+    \hline
+    & 1$\mu s$/4 cores & 1$\mu s$/8 cores & 100$\mu s$/4 cores &
+                                                                 100$\mu s$/8 cores\\
+    \hline    
+    Linear & 9$\times$ 10\(^{\text{-6}}\) & 1.3$\times$
+                                            10\(^{\text{-5}}\) &
+                                                                 8.6$\times$ 10\(^{\text{-4}}\) & 1.3$\times$ 10\(^{\text{-3}}\)\\
+    \hline    
+    3/2 & 9.3$\times$ 10\(^{\text{-6}}\) & 1.4$\times$
+                                           10\(^{\text{-5}}\) &
+                                                                8.5$\times$ 10\(^{\text{-4}}\) & 1.2$\times$ 10\(^{\text{-3}}\)\\
+    \hline    
   \end{tabular}
 \end{center}
 
@@ -161,7 +186,7 @@ that the algorithm will do.
 Moreover, we see that when running the parallel algorithms on 8 cores,
 it is a bit slower that on 4 cores. I think this comes from the fact
 that my processor has only 4 cores and when running the algorithms on
-8 cores, I do not computation time but I loose time in communications
+8 cores, I do not gain any computation time but I loose time in communications
 between the ``virtual'' processors. Now we will compare the sequential
 algorithms. I will just study the linear graph because we saw that the
 results were similar with the 3/2 graph. I will only study the case
@@ -205,15 +230,57 @@ better than the sequential one. First conclusion, the efficiency of
 the parallel algorithm is a lot better. I think we can explain this
 because in the parallel Kruskal, a processor wait little for another
 one. Indeed a processor do some computations send or receive
-informations and then continue working but is does not need to wait
+information and then continue working but it does not need to wait
 for an answer of the processor it communicated with. Also, the
 algorithm is a lot less ``centralized''. There is no processor that
-have to regularly get informations from everyone, a processor only
-work with one close neighbor. I think this is why the parallel
-algorithm is a lot better.
+have to regularly get information from everyone, a processor only
+work with one close neighbour. I think this is why the parallel
+algorithm in Kuskal is a lot better.
 
 \section{Conclusion}
 
-To conclude, 
+To conclude, we have seen that the communications have a strong impact
+on the efficiency of the distributed algorithms. Kruskal seems to be
+the the faster probably because of the face that we do not have to
+send something to one processor regularly. But to be really efficient,
+the communications need to have a low latency.
+
+\newpage
+
+\section*{Appendix A}
+\label{sect:appendixa}
+I want to check that the maximal weight as little incidence on the
+computation time. I take a graph with $n=500$ and $m=1000$, with the
+maximal weight $W=500$ and an other identical graph but with $W=2$ and
+I compared the computation time. I used Simgrid with 4 processors for
+the parallel algorithms, and bandwith of 100Gpbs and a latency of
+1$\mu$s.
+
+One can see one table~\ref{tab:collisions} that this has no influence
+on the final speed. This is normal because the equality between two
+edges does not make more computations.
+
+The graph I used for this is called ``collisions.txt''.
+
+\begin{table}
+  \centering
+  \begin{tabular}{|l|c|c|}
+    \hline
+    & $W=500$& $W=2$\\
+    \hline    
+    Prim parallel & $3\times 10^{-3}$ & $3\times 10^{-3}$\\
+    \hline    
+    Kruskal parallel & $9\times 10^{-6}$ & $9.1\times 10^{-6}$\\
+    \hline    
+    Prim sequential  & $5\times 10^{-3}$ & $5\times 10^{-3}$\\
+    \hline    
+    Kruskal sequential & $2\times 10^{-3}$ & $2\times 10^{-3}$\\
+    \hline                           
+  \end{tabular}
+  \caption{Comparison of the computation time (in second) of the
+    different algorithms on the same graph but one with the maximal
+    weight being 500 and the other one being 2}
+  \label{tab:collisions}
+\end{table}
 
 \end{document}
